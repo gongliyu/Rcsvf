@@ -7,3 +7,4 @@ Depends: R (>= 3.3.1)
 License: GPLv3
 Encoding: UTF-8
 LazyData: true
+Suggests: testthat
