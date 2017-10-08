@@ -1,10 +1,13 @@
 Package: csvf
-Title: What the Package Does (one line, title case)
-Version: 0.0.0.9000
+Version: 0.1
+Date: 2017-10-07
+Title: A package to handle large csv files
 Authors@R: person("Liyu", "Gong", email = "gongliyu@gmail.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Author: Liyu Gong [aut, cre]
 Depends: R (>= 3.3.1)
 License: GPLv3
 Encoding: UTF-8
 LazyData: true
 Suggests: testthat
+Description: What the package does (one paragraph).
+URL: https://github.com/gongliyu/r-csvf
