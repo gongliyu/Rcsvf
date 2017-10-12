@@ -9,5 +9,8 @@ License: GPLv3
 Encoding: UTF-8
 LazyData: true
 Suggests: testthat
+LinkingTo: BH,Rcpp
 Description: What the package does (one paragraph).
 URL: https://github.com/gongliyu/r-csvf
+RoxygenNote: 6.0.1
+
