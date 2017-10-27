@@ -7,7 +7,7 @@
 namespace rcsvf {
     class reader : public csvf::reader {
     public:
-        enum class field_type {INTEGER, DOUBLE, STRING};
+        enum class field_type {UNKNOWN,INTEGER, DOUBLE, STRING};
         
         /** @name Constructors and destructors
          */
@@ -53,6 +53,11 @@ namespace rcsvf {
                      SEXP end_offset);
         
         reader& detect_field_types();
+
+        std::vector<field_type> field_types() const
+        {
+            return m_field_types;
+        }
 
     protected:
         std::vector<field_type> m_field_types;

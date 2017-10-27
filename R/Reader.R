@@ -11,16 +11,16 @@
 Reader <- R6::R6Class(
   "Reader",
   public = list(
-    initialize = function(filename)
+    initialize = function(...)
     {
       private$handle <- .Call("rcsvf_reader_create")
-      self$open(filename)
+      self$open(...)
     },
 
     open = function(filename, sep=",", eol="\n",
                     quote.rule="doubled", fill=TRUE,
                     strip.white=TRUE, skip.blank.lines=TRUE,
-                    quote="\"", verbose=TRUE,
+                    quote="\"", verbose=FALSE,
                     begin.offset=NULL, end.offset=NULL)
     {
       .Call("rcsvf_reader_open", private$handle,
@@ -33,7 +33,13 @@ Reader <- R6::R6Class(
     {
       if (!is.null(private$handle))
         .Call("rcsvf_reader_destroy", private$handle)
-    }),
+    },
+
+    properties = function()
+    {
+      .Call("rcsvf_reader_properties", private$handle)
+    }
+    ),
 
   private = list(
     handle = NULL)
