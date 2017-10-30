@@ -7,7 +7,8 @@
 namespace rcsvf {
     class reader : public csvf::reader {
     public:
-        enum class field_type {UNKNOWN,INTEGER, DOUBLE, STRING};
+        enum class field_type {INTEGER, DOUBLE, STRING};
+        enum class header_type {YES, NO, AUTO};
         
         /** @name Constructors and destructors
          */
@@ -40,26 +41,53 @@ namespace rcsvf {
          *
          * @example 
          */
-        reader& open(SEXP fname,
-                     SEXP sep,
-                     SEXP eol,
-                     SEXP quote_rule,
-                     SEXP fill,
-                     SEXP strip_white,
-                     SEXP skip_blank_lines,
-                     SEXP quote,
-                     SEXP verbose,
-                     SEXP begin_offset,
-                     SEXP end_offset);
-        
+        template <typename... Args>
+        reader& open(const std::string& fname, Args... args)
+        {
+            ptrdiff_t begin_offset=-1, end_offset=-1;
+            m_header = header_type::AUTO;
+            auto tmpopts = options::parse(args...);
+            options::assign(tmpopts,
+                            "begin_offset", begin_offset,
+                            "end_offset", end_offset,
+                            "header", m_header);
+
+            // override begin_offset and end_offset
+            csvf::reader::open(
+                fname, args...,
+                "begin_offset", static_cast<ptrdiff_t>(-1),
+                "end_offset", static_cast<ptrdiff_t>(-1));
+            detect_field_types();
+            detect_field_names();
+
+            if (begin_offset > 0) {
+                m_begin = m_file.data() + begin_offset;
+            }
+
+            if (end_offset > 0) {
+                m_end = m_file.data() + end_offset;
+            }
+
+            return *this;
+        }
+            
         reader& detect_field_types();
+
+        reader& detect_field_names();
 
         std::vector<field_type> field_types() const
         {
             return m_field_types;
         }
 
+        std::vector<std::string> field_names() const
+        {
+            return m_field_names;
+        }
+
     protected:
         std::vector<field_type> m_field_types;
+        std::vector<std::string> m_field_names;
+        header_type m_header;
     };
 }

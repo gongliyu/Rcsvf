@@ -21,12 +21,13 @@ Reader <- R6::R6Class(
                     quote.rule="doubled", fill=TRUE,
                     strip.white=TRUE, skip.blank.lines=TRUE,
                     quote="\"", verbose=FALSE,
-                    begin.offset=NULL, end.offset=NULL)
+                    begin.offset=NULL, end.offset=NULL,
+                    header="auto")
     {
       .Call("rcsvf_reader_open", private$handle,
             filename, sep, eol, quote.rule, fill, strip.white,
             skip.blank.lines, quote, verbose,
-            begin.offset, end.offset)
+            begin.offset, end.offset, header)
     },
     
     finalize = function()
@@ -38,6 +39,11 @@ Reader <- R6::R6Class(
     properties = function()
     {
       .Call("rcsvf_reader_properties", private$handle)
+    },
+
+    read = function(n=1)
+    {
+      .Call("rcsvf_reader_read", private$handle, n)
     }
     ),
 

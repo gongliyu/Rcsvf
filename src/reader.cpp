@@ -38,12 +38,96 @@ void rcsvf_reader_open(SEXP ptr,
                        SEXP quote,
                        SEXP verbose,
                        SEXP begin_offset,
-                       SEXP end_offset)
+                       SEXP end_offset,
+                       SEXP header)
 {
-    static_cast<rcsvf::reader*>(R_ExternalPtrAddr(ptr))->open(
-        fname, sep, eol, quote_rule, fill, strip_white,
-        skip_blank_lines, quote, verbose,
-        begin_offset, end_offset);
+    // ptr
+    auto ptr_cpp = static_cast<rcsvf::reader*>(R_ExternalPtrAddr(ptr));
+
+    // fname
+    std::string fname_cpp = CHAR(STRING_ELT(fname,0));
+
+    // sep
+    std::string tmpstr = CHAR(STRING_ELT(sep,0));
+    char sep_cpp = tmpstr[0];
+
+    // eol
+    tmpstr = CHAR(STRING_ELT(eol,0));
+    std::vector<char> eol_cpp(tmpstr.size());
+    std::copy(tmpstr.begin(), tmpstr.end(), eol_cpp.begin());
+
+    // quote_rule
+    tmpstr = CHAR(STRING_ELT(quote_rule,0));
+    rcsvf::reader::quote_rule_type quote_rule_cpp;
+    if (tmpstr == "doubled") {
+        quote_rule_cpp = rcsvf::reader::quote_rule_type::doubled;
+    } else if (tmpstr == "escaped") {
+        quote_rule_cpp = rcsvf::reader::quote_rule_type::escaped;
+    } else if (tmpstr == "verbatim") {
+        quote_rule_cpp = rcsvf::reader::quote_rule_type::verbatim;
+    } else if (tmpstr == "none") {
+        quote_rule_cpp = rcsvf::reader::quote_rule_type::verbatim;
+    } else if (tmpstr == "auto.detect") {
+        quote_rule_cpp = rcsvf::reader::quote_rule_type::auto_detect;
+    } else {
+        Rf_error("invalid value for argument quote_rule");
+    }
+
+    // fill
+    bool fill_cpp = Rf_asLogical(fill) > 0;
+    
+    // strip_white
+    bool strip_white_cpp = Rf_asLogical(strip_white) > 0;
+
+    // skip_blank_lines
+    bool skip_blank_lines_cpp = Rf_asLogical(skip_blank_lines)>0;
+
+    // quote
+    tmpstr = CHAR(STRING_ELT(quote,0));
+    char quote_cpp = tmpstr[0];
+
+    // verbose
+    bool verbose_cpp = Rf_asLogical(verbose) > 0;
+
+    // begin_offset
+    ptrdiff_t begin_offset_cpp = -1;
+    if (!Rf_isNull(begin_offset)) {
+        begin_offset_cpp = reinterpret_cast<ptrdiff_t>(R_ExternalPtrAddr(begin_offset));
+    }
+
+    // end_offset
+    ptrdiff_t end_offset_cpp = -1;
+    if (!Rf_isNull(end_offset)) {
+        end_offset_cpp = reinterpret_cast<ptrdiff_t>(R_ExternalPtrAddr(end_offset));
+    }
+
+    // header
+    rcsvf::reader::header_type header_cpp;
+    if (Rf_isLogical(header)) {
+        header_cpp = Rf_asLogical(header) > 0 ?
+            rcsvf::reader::header_type::YES :
+            rcsvf::reader::header_type::NO;
+    } else if (Rf_isString(header) &&
+               std::strcmp(CHAR(STRING_ELT(header,0)),"auto")==0) {
+        header_cpp = rcsvf::reader::header_type::AUTO;
+    } else {
+        Rf_error("option \"header\" should be a logical value or"
+                 "\"auto\"");
+    }
+        
+    
+    ptr_cpp->open(fname_cpp,
+                  "sep", sep_cpp,
+                  "eol", eol_cpp,
+                  "quote_rule", quote_rule_cpp,
+                  "fill", fill_cpp,
+                  "strip_white", strip_white_cpp,
+                  "skip_blank_lines", skip_blank_lines_cpp,
+                  "quote", quote_cpp,
+                  "verbose", verbose_cpp,
+                  "begin_offset", begin_offset_cpp,
+                  "end_offset", end_offset_cpp,
+                  "header", header_cpp);
 }
 
 /**
@@ -52,12 +136,12 @@ void rcsvf_reader_open(SEXP ptr,
 extern "C"
 SEXP rcsvf_reader_properties(SEXP ptr)
 {
-    rcsvf::reader* cpp_ptr = static_cast<rcsvf::reader*>(R_ExternalPtrAddr(ptr));
+    rcsvf::reader* ptr_cpp = static_cast<rcsvf::reader*>(R_ExternalPtrAddr(ptr));
     
-
     std::vector<const char*> names{"sep", "eol", "quote.rule", "fill",
             "strip.white", "skip.blank.lines",
-            "quote", "verbose", "nfields", "field.types"};
+            "quote", "verbose", "nfields", "field.types",
+            "field.names"};
     R_xlen_t N = names.size();
     SEXP nms = Rf_protect(Rf_allocVector(STRSXP, N));
     for (int i=0; i<N; i++){
@@ -67,22 +151,22 @@ SEXP rcsvf_reader_properties(SEXP ptr)
     Rf_setAttrib(props, R_NamesSymbol, nms);
 
     // sep
-    std::string cpp_sep(1, cpp_ptr->sep());
+    std::string sep_cpp(1, ptr_cpp->sep());
     SEXP sep = Rf_protect(Rf_allocVector(STRSXP, 1));
-    SET_STRING_ELT(sep, 0, Rf_mkChar(cpp_sep.c_str()));
+    SET_STRING_ELT(sep, 0, Rf_mkChar(sep_cpp.c_str()));
     SET_VECTOR_ELT(props, 0, sep);
 
     // eol
-    std::vector<char> cpp_eol_vec = cpp_ptr->eol();
-    std::string cpp_eol_str(cpp_eol_vec.begin(), cpp_eol_vec.end());
+    std::vector<char> eol_vec_cpp = ptr_cpp->eol();
+    std::string eol_str_cpp(eol_vec_cpp.begin(), eol_vec_cpp.end());
     SEXP eol = Rf_protect(Rf_allocVector(STRSXP, 1));
-    SET_STRING_ELT(eol, 0, Rf_mkChar(cpp_eol_str.c_str()));
+    SET_STRING_ELT(eol, 0, Rf_mkChar(eol_str_cpp.c_str()));
     SET_VECTOR_ELT(props, 1, eol);
 
     // quote rule
-    auto cpp_quote_rule = cpp_ptr->quote_rule();
+    auto quote_rule_cpp = ptr_cpp->quote_rule();
     SEXP quote_rule = Rf_protect(Rf_allocVector(STRSXP, 1));
-    switch (cpp_quote_rule)
+    switch (quote_rule_cpp)
     {
     case rcsvf::reader::quote_rule_type::doubled:
         SET_STRING_ELT(quote_rule, 0, Rf_mkChar("doubled"));
@@ -96,40 +180,43 @@ SEXP rcsvf_reader_properties(SEXP ptr)
     case rcsvf::reader::quote_rule_type::none:
         SET_STRING_ELT(quote_rule, 0, Rf_mkChar("none"));
         break;
+    case rcsvf::reader::quote_rule_type::auto_detect:
+        SET_STRING_ELT(quote_rule, 0, Rf_mkChar("auto.detect"));
+        break;
     }
     SET_VECTOR_ELT(props, 2, quote_rule);
 
     // fill
-    SEXP fill = Rf_protect(Rf_ScalarLogical(cpp_ptr->fill()));
+    SEXP fill = Rf_protect(Rf_ScalarLogical(ptr_cpp->fill()));
     SET_VECTOR_ELT(props, 3, fill);
 
     // strip.white
-    SEXP strip_white = Rf_protect(Rf_ScalarLogical(cpp_ptr->strip_white()));
+    SEXP strip_white = Rf_protect(Rf_ScalarLogical(ptr_cpp->strip_white()));
     SET_VECTOR_ELT(props, 4, strip_white);
 
     // skip.blank.lines
-    SEXP skip_blank_lines = Rf_protect(Rf_ScalarLogical(cpp_ptr->skip_blank_lines()));
+    SEXP skip_blank_lines = Rf_protect(Rf_ScalarLogical(ptr_cpp->skip_blank_lines()));
     SET_VECTOR_ELT(props, 5, skip_blank_lines);
 
     // quote
-    std::string cpp_quote(1, cpp_ptr->quote());
+    std::string quote_cpp(1, ptr_cpp->quote());
     SEXP quote = Rf_protect(Rf_allocVector(STRSXP, 1));
-    SET_STRING_ELT(quote, 0, Rf_mkChar(cpp_quote.c_str()));
+    SET_STRING_ELT(quote, 0, Rf_mkChar(quote_cpp.c_str()));
     SET_VECTOR_ELT(props, 6, quote);
 
     // verbose
-    SEXP verbose = Rf_protect(Rf_ScalarLogical(cpp_ptr->verbose()));
+    SEXP verbose = Rf_protect(Rf_ScalarLogical(ptr_cpp->verbose()));
     SET_VECTOR_ELT(props, 7, verbose);
 
     // nfields
-    SEXP nfields = Rf_protect(Rf_ScalarInteger(cpp_ptr->nfields()));
+    SEXP nfields = Rf_protect(Rf_ScalarInteger(ptr_cpp->nfields()));
     SET_VECTOR_ELT(props, 8, nfields);
 
     // field types
-    auto cpp_field_types = cpp_ptr->field_types();
-    SEXP field_types = Rf_protect(Rf_allocVector(STRSXP, cpp_field_types.size()));
-    for (size_t i=0; i<cpp_field_types.size(); i++) {
-        switch (cpp_field_types[i])
+    auto field_types_cpp = ptr_cpp->field_types();
+    SEXP field_types = Rf_protect(Rf_allocVector(STRSXP, field_types_cpp.size()));
+    for (size_t i=0; i<field_types_cpp.size(); i++) {
+        switch (field_types_cpp[i])
         {
         case rcsvf::reader::field_type::INTEGER:
             SET_STRING_ELT(field_types, i, Rf_mkChar("integer"));
@@ -143,9 +230,80 @@ SEXP rcsvf_reader_properties(SEXP ptr)
         }
     }
     SET_VECTOR_ELT(props, 9, field_types);
+
+    // field names
+    auto field_names_cpp = ptr_cpp->field_names();
+    SEXP field_names = Rf_protect(Rf_allocVector(STRSXP, field_names_cpp.size()));
+    for (size_t i=0; i<field_names_cpp.size(); i++) {
+        SET_STRING_ELT(field_names, i, Rf_mkChar(field_names_cpp[i].c_str()));
+    }
+    SET_VECTOR_ELT(props, 10, field_names);
     
-    Rf_unprotect(12);
+    Rf_unprotect(13);
     return props;
+}
+
+/**
+ * read a specified number of records
+ */
+extern "C"
+SEXP rcsvf_reader_read(SEXP ptr, SEXP n)
+{
+    auto ptr_cpp = static_cast<rcsvf::reader*>(R_ExternalPtrAddr(ptr));
+    int nfields = ptr_cpp->nfields();
+    std::cout<<"nfields="<<nfields<<std::endl;
+    auto n_cpp = Rf_asInteger(n);
+    auto field_types = ptr_cpp->field_types();
+
+    // allocate result list
+    SEXP res = Rf_protect(Rf_allocVector(VECSXP, nfields));
+    std::vector<void*> field_addr(nfields, nullptr);
+    for (int i=0; i<nfields; i++) {
+        switch (field_types[i])
+        {
+        case rcsvf::reader::field_type::STRING:
+            SET_VECTOR_ELT(res, i, Rf_allocVector(CHARSXP, n_cpp));
+            field_addr[i] = VECTOR_ELT(res, i);
+            break;
+            
+        case rcsvf::reader::field_type::DOUBLE:
+            SET_VECTOR_ELT(res, i, Rf_allocVector(REALSXP, n_cpp));
+            field_addr[i] = REAL(VECTOR_ELT(res, i));
+            break;
+            
+        case rcsvf::reader::field_type::INTEGER:
+            SET_VECTOR_ELT(res, i, Rf_allocVector(INTSXP, n_cpp));
+            field_addr[i] = INTEGER(VECTOR_ELT(res, i));
+            break;
+        default:
+            Rf_error("unhandled field type in rcsvf_reader_read");
+        }
+    }
+
+    //read n records
+    for (int i=0; i<n_cpp; i++) {
+        auto record = ptr_cpp->read_record();
+        for (int j=0; j<nfields; j++) {
+            switch (field_types[j])
+            {
+            case rcsvf::reader::field_type::STRING:
+                SET_STRING_ELT(
+                    static_cast<SEXP>(field_addr[j]), i,
+                    Rf_mkChar(static_cast<std::string>(record[i]).c_str()));
+                break;
+            case rcsvf::reader::field_type::DOUBLE:
+                static_cast<double*>(field_addr[j])[i]=std::stold(static_cast<std::string>(record[i]));
+                break;
+            case rcsvf::reader::field_type::INTEGER:
+                static_cast<int*>(field_addr[j])[i]=std::stoll(static_cast<std::string>(record[i]));
+                break;
+            default:
+                Rf_error("unhandled field type in rcsvf_reader_read");
+            }
+        }
+    }
+    Rf_unprotect(1);
+    return res;
 }
 
 namespace {
@@ -176,80 +334,6 @@ namespace {
 // Implementation of rcsvf::reader class
 //************************************************************
 namespace rcsvf {
-    reader& reader::open(SEXP fname,
-                         SEXP sep,
-                         SEXP eol,
-                         SEXP quote_rule,
-                         SEXP fill,
-                         SEXP strip_white,
-                         SEXP skip_blank_lines,
-                         SEXP quote,
-                         SEXP verbose,
-                         SEXP begin_offset,
-                         SEXP end_offset)
-    {
-        std::string fname_cpp = CHAR(STRING_ELT(fname,0));
-        m_filename = fname_cpp;
-        m_file.close();
-        m_file.open(fname_cpp);
-
-        m_sep = Rcpp::as<std::string>(sep)[0];
-        m_eol.clear();
-        std::string eol_cpp = CHAR(STRING_ELT(eol,0));
-        m_eol.resize(eol_cpp.size());
-        std::copy(eol_cpp.begin(), eol_cpp.end(), m_eol.begin());
-
-        auto quote_rule_cpp = Rcpp::as<std::string>(quote_rule);
-        if (quote_rule_cpp == "doubled") {
-            m_quote_rule = quote_rule_type::doubled;
-        } else if (quote_rule_cpp == "escaped") {
-            m_quote_rule = quote_rule_type::escaped;
-        } else if (quote_rule_cpp == "verbatim") {
-            m_quote_rule = quote_rule_type::verbatim;
-        } else if (quote_rule_cpp == "none") {
-            m_quote_rule = quote_rule_type::none;
-        } else {
-            Rf_error("invalid value for argument quote_rule");
-        }
-        
-        m_fill = Rf_asLogical(fill) > 0;
-
-        m_strip_white = Rf_asLogical(strip_white) > 0;
-
-        m_skip_blank_lines = Rf_asLogical(skip_blank_lines) > 0;
-
-        m_quote = Rcpp::as<std::string>(quote)[0];
-
-        m_verbose = Rf_asLogical(verbose) > 0;
-
-        ptrdiff_t begin_offset_cpp=-1, end_offset_cpp=-1;
-        if (!Rf_isNull(begin_offset)) {
-            begin_offset_cpp = reinterpret_cast<ptrdiff_t>(R_ExternalPtrAddr(begin_offset));
-        }
-        if (!Rf_isNull(end_offset)) {
-            end_offset_cpp = reinterpret_cast<ptrdiff_t>(R_ExternalPtrAddr(end_offset));
-        }
-        
-        m_nfields = -1;
-
-        m_begin = m_file.data();
-        m_end = m_file.data() + m_file.size();
-        strip_if_bom();
-        detect_eol();
-        strip_space();
-        detect_sep_quote_rule_nfields();
-        detect_field_types();
-
-        if (begin_offset > 0) {
-            m_begin = m_file.data() + begin_offset_cpp;
-        }
-
-        if (end_offset > 0) {
-            m_end = m_file.data() + end_offset_cpp;
-        }
-        return *this;
-    }
-    
     reader& reader::detect_field_types()
     {
         const char *pos_original = m_pos;
@@ -283,7 +367,6 @@ namespace rcsvf {
             auto record = read_record();
             assert(record.size()==m_nfields);
             for (int j=0; j<m_nfields; j++) {
-                std::cout<<"j="<<j<<std::endl;
                 // remove quote if it is
                 auto field = record[j];
                 if (field.front()=='"' && field.back()=='"') {
@@ -292,16 +375,13 @@ namespace rcsvf {
                 }
                 std::string field2(field.begin(), field.end());
 
-                std::cout<<"field2="<<field2<<std::endl;
                 // check if convertible to integer
                 if (m_field_types[j] == field_type::INTEGER) {
                     bool success = check_integer(field2);
                     if (!success) {
-                        std::cout<<"check integer failed"<<std::endl;
                         m_field_types[j] = check_double(field2) ? field_type::DOUBLE : field_type::STRING;
                     }
                 } else if (m_field_types[j] == field_type::DOUBLE) {
-                    std::cout<<"currently double"<<std::endl;
                     if (!check_double(field2)) {
                         m_field_types[j] = field_type::STRING;
                     }
@@ -312,6 +392,57 @@ namespace rcsvf {
         m_pos = pos_original;
         return *this;
     }
+
+    reader& reader::detect_field_names()
+    {
+        m_field_names.resize(m_nfields);
+        for (int i=0; i<m_nfields; i++) {
+            std::ostringstream stream;
+            stream<<"V"<<i+1;
+            m_field_names[i] = stream.str();
+        }
+
+        if (m_header == header_type::YES) {
+            auto record = csvf::reader::read_record();
+            for (int i=0; i<m_nfields; i++) {
+                if (!record[i].empty()) {
+                    m_field_names[i] = static_cast<std::string>(record[i]);
+                }
+            }
+        } else if (m_header == header_type::AUTO) {
+            // if the first row can not convert to the types detected,
+            // then it will be treated as header
+            const char *pos = m_pos;
+            auto record = csvf::reader::read_record();
+            bool success = true;
+            for (int i=0; i<m_nfields; i++) {
+                switch (m_field_types[i])
+                {
+                case field_type::INTEGER:
+                    success = check_integer(static_cast<std::string>(record[i]));
+                    break;
+
+                case field_type::DOUBLE:
+                    success = check_double(static_cast<std::string>(record[i]));
+                    break;
+
+                case field_type::STRING:
+                    break;
+                }
+                if (!success) {
+                    break;
+                }
+            }
+
+            if (!success) {
+                for (int i=0; i<m_nfields; i++) {
+                    m_field_names[i] = static_cast<std::string>(record[i]);
+                }
+            }
+        }
+        return *this;
+    }
+    
 }
 
 
