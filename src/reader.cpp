@@ -1,5 +1,6 @@
 #include <iostream>
 #include <iomanip>
+#include <cstdint>
 #include <rcsvf/reader.hpp>
 #include <Rcpp.h>
 
@@ -92,13 +93,17 @@ void rcsvf_reader_open(SEXP ptr,
     // begin_offset
     ptrdiff_t begin_offset_cpp = -1;
     if (!Rf_isNull(begin_offset)) {
-        begin_offset_cpp = reinterpret_cast<ptrdiff_t>(R_ExternalPtrAddr(begin_offset));
+        double tmp = Rf_asReal(begin_offset);
+        int64_t tmp2 = reinterpret_cast<int64_t&>(tmp);
+        begin_offset_cpp = static_cast<ptrdiff_t>(tmp2);
     }
 
     // end_offset
     ptrdiff_t end_offset_cpp = -1;
     if (!Rf_isNull(end_offset)) {
-        end_offset_cpp = reinterpret_cast<ptrdiff_t>(R_ExternalPtrAddr(end_offset));
+        double tmp = Rf_asReal(end_offset);
+        int64_t tmp2 = reinterpret_cast<int64_t&>(tmp);
+        end_offset_cpp = static_cast<ptrdiff_t>(tmp2);
     }
 
     // header
@@ -251,14 +256,16 @@ SEXP rcsvf_reader_read(SEXP ptr, SEXP n)
 {
     auto ptr_cpp = static_cast<rcsvf::reader*>(R_ExternalPtrAddr(ptr));
     int nfields = ptr_cpp->nfields();
-    std::cout<<"nfields="<<nfields<<std::endl;
     auto n_cpp = Rf_asInteger(n);
     auto field_types = ptr_cpp->field_types();
+    auto field_names = ptr_cpp->field_names();
 
     // allocate result list
     SEXP res = Rf_protect(Rf_allocVector(VECSXP, nfields));
     std::vector<void*> field_addr(nfields, nullptr);
+    SEXP nms = Rf_protect(Rf_allocVector(STRSXP, nfields));
     for (int i=0; i<nfields; i++) {
+        SET_STRING_ELT(nms, i, Rf_mkChar(field_names[i].c_str()));
         switch (field_types[i])
         {
         case rcsvf::reader::field_type::STRING:
@@ -279,31 +286,80 @@ SEXP rcsvf_reader_read(SEXP ptr, SEXP n)
             Rf_error("unhandled field type in rcsvf_reader_read");
         }
     }
+    Rf_setAttrib(res, R_NamesSymbol, nms);
+    SEXP rownames = Rf_protect(Rf_allocVector(INTSXP, n_cpp));
+    for (int i=0; i<n_cpp; i++) {
+        INTEGER(rownames)[i] = i+1;
+    }
 
     //read n records
-    for (int i=0; i<n_cpp; i++) {
+    int nread = 0;
+    while (nread < n_cpp && *ptr_cpp) {
         auto record = ptr_cpp->read_record();
         for (int j=0; j<nfields; j++) {
             switch (field_types[j])
             {
             case rcsvf::reader::field_type::STRING:
                 SET_STRING_ELT(
-                    static_cast<SEXP>(field_addr[j]), i,
-                    Rf_mkChar(static_cast<std::string>(record[i]).c_str()));
+                    static_cast<SEXP>(field_addr[j]), nread,
+                    Rf_mkChar(static_cast<std::string>(record[j]).c_str()));
                 break;
             case rcsvf::reader::field_type::DOUBLE:
-                static_cast<double*>(field_addr[j])[i]=std::stold(static_cast<std::string>(record[i]));
+                static_cast<double*>(field_addr[j])[nread]=std::stold(static_cast<std::string>(record[nread]));
                 break;
             case rcsvf::reader::field_type::INTEGER:
-                static_cast<int*>(field_addr[j])[i]=std::stoll(static_cast<std::string>(record[i]));
+                static_cast<int*>(field_addr[j])[nread]=std::stoll(static_cast<std::string>(record[nread]));
                 break;
             default:
                 Rf_error("unhandled field type in rcsvf_reader_read");
             }
         }
+        nread++;
     }
-    Rf_unprotect(1);
+
+
+
+    for (int i=0; i<nfields; i++) {
+        SETLENGTH(VECTOR_ELT(res,i), nread);
+    }
+    SETLENGTH(rownames, nread);
+    
+    Rf_setAttrib(res, R_RowNamesSymbol, rownames);
+    Rf_setAttrib(res, R_ClassSymbol, Rf_mkString("data.frame"));
+    Rf_unprotect(3);
     return res;
+}
+
+/**
+ * estimate positions for equal chunks
+ */
+extern "C"
+SEXP rcsvf_reader_chunk(SEXP ptr, SEXP nchunks, SEXP npositions, SEXP nrecords_per_position)
+{
+    // ptr
+    auto ptr_cpp = static_cast<rcsvf::reader*>(R_ExternalPtrAddr(ptr));
+
+    // nchunks
+    int nchunks_cpp = Rf_asInteger(nchunks);
+    
+    // npositions
+    int npositions_cpp = Rf_asInteger(npositions);
+
+    // nrecords_per_position
+    int nrecords_per_position_cpp = Rf_asInteger(nrecords_per_position);
+
+    std::vector<ptrdiff_t> offsets_cpp = ptr_cpp->chunk(nchunks_cpp, npositions_cpp, nrecords_per_position_cpp);
+
+    SEXP offsets = Rf_protect(Rf_allocVector(REALSXP, offsets_cpp.size()));
+    for (int i=0; i<offsets_cpp.size(); i++) {
+        int64_t tmp = static_cast<int64_t>(offsets_cpp[i]);
+        //double tmp2 = reinterpret_cast<double&>(tmp);
+        //REAL(offsets)[i] = tmp2;
+        REAL(offsets)[i] = reinterpret_cast<double&>(tmp);
+    }
+  
+    Rf_unprotect(1);
+    return offsets;
 }
 
 namespace {
@@ -395,6 +451,7 @@ namespace rcsvf {
 
     reader& reader::detect_field_names()
     {
+        const char *pos_original = m_pos;
         m_field_names.resize(m_nfields);
         for (int i=0; i<m_nfields; i++) {
             std::ostringstream stream;
@@ -438,6 +495,8 @@ namespace rcsvf {
                 for (int i=0; i<m_nfields; i++) {
                     m_field_names[i] = static_cast<std::string>(record[i]);
                 }
+            } else {
+                m_pos = pos_original;
             }
         }
         return *this;

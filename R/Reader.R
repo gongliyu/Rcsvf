@@ -40,10 +40,15 @@ Reader <- R6::R6Class(
     {
       .Call("rcsvf_reader_properties", private$handle)
     },
-
+    
     read = function(n=1)
     {
       .Call("rcsvf_reader_read", private$handle, n)
+    },
+
+    chunk = function(nchunks, npositions=-1, nrecords_per_position=10)
+    {
+      .Call("rcsvf_reader_chunk", private$handle, nchunks, npositions, nrecords_per_position)
     }
     ),
 

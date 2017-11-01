@@ -57,15 +57,18 @@ namespace rcsvf {
                 fname, args...,
                 "begin_offset", static_cast<ptrdiff_t>(-1),
                 "end_offset", static_cast<ptrdiff_t>(-1));
+
             detect_field_types();
             detect_field_names();
-
-            if (begin_offset > 0) {
+            
+            if (begin_offset >= 0) {
                 m_begin = m_file.data() + begin_offset;
+                m_pos = m_begin;
             }
 
-            if (end_offset > 0) {
+            if (end_offset >= 0) {
                 m_end = m_file.data() + end_offset;
+                m_pos = m_begin;
             }
 
             return *this;
