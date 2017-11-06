@@ -2,7 +2,7 @@
 #'
 #' @docType class
 #' @export
-#' @import R6
+#'
 #' @keywords data
 #'
 #' @useDynLib csvf
