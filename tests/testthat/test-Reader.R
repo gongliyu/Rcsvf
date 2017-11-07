@@ -2,6 +2,14 @@ context("Reader")
 
 test_that("constructor", {
   reader <- Reader$new("data/simple.csv")
+  reader$open("data/simple.csv")
+  reader$open("data/mixnumchar.csv")
+  reader2 <- Reader$new("data/mixnumchar.csv")
+  reader2$open("data/mixnumchar.csv")
+  reader$open("data/mixnumchar.csv")
+  reader2$open("data/simple.csv")
+  expect_error(Reader$new(tempfile()))
+  expect_error(reader$open(tempfile()))
   expect_equal(2 * 2, 4)
 })
 
@@ -31,6 +39,12 @@ test_that("read", {
   expect_equivalent(
     reader$read(100),
     data.frame(V1=3:7,V2=3:7,V3=3:7,V4=3:7,V5=3:7))
+  reader$open("data/mixnumchar.csv")
+  expect_equivalent(
+    reader$read(100),
+    data.frame(V1=c("hello","hello","hello","1.0","1"),
+               V2=rep(1,5), V3=c(1,1,1,2,3),
+               stringsAsFactors = FALSE))
 })
 
 test_that("chunk", {

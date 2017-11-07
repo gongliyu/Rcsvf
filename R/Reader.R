@@ -24,10 +24,14 @@ Reader <- R6::R6Class(
                     begin.offset=NULL, end.offset=NULL,
                     header="auto")
     {
+      if (!file.exists(filename)) {
+        stop(paste0("the input file: ", filename, " does not exist."))
+      }
       .Call("rcsvf_reader_open", private$handle,
             filename, sep, eol, quote.rule, fill, strip.white,
             skip.blank.lines, quote, verbose,
             begin.offset, end.offset, header)
+      NULL
     },
     
     finalize = function()

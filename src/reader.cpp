@@ -269,7 +269,7 @@ SEXP rcsvf_reader_read(SEXP ptr, SEXP n)
         switch (field_types[i])
         {
         case rcsvf::reader::field_type::STRING:
-            SET_VECTOR_ELT(res, i, Rf_allocVector(CHARSXP, n_cpp));
+            SET_VECTOR_ELT(res, i, Rf_allocVector(STRSXP, n_cpp));
             field_addr[i] = VECTOR_ELT(res, i);
             break;
             
@@ -305,10 +305,10 @@ SEXP rcsvf_reader_read(SEXP ptr, SEXP n)
                     Rf_mkChar(static_cast<std::string>(record[j]).c_str()));
                 break;
             case rcsvf::reader::field_type::DOUBLE:
-                static_cast<double*>(field_addr[j])[nread]=std::stold(static_cast<std::string>(record[nread]));
+                static_cast<double*>(field_addr[j])[nread]=std::stold(static_cast<std::string>(record[j]));
                 break;
             case rcsvf::reader::field_type::INTEGER:
-                static_cast<int*>(field_addr[j])[nread]=std::stoll(static_cast<std::string>(record[nread]));
+                static_cast<int*>(field_addr[j])[nread]=std::stoll(static_cast<std::string>(record[j]));
                 break;
             default:
                 Rf_error("unhandled field type in rcsvf_reader_read");
