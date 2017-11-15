@@ -44,6 +44,9 @@ namespace rcsvf {
         template <typename... Args>
         reader& open(const std::string& fname, Args... args)
         {
+            m_field_types.clear();
+            m_field_names.clear();
+            
             ptrdiff_t begin_offset=-1, end_offset=-1;
             m_header = header_type::AUTO;
             auto tmpopts = options::parse(args...);
@@ -61,6 +64,12 @@ namespace rcsvf {
             detect_field_types();
             detect_field_names();
 
+            // for (int i=0; i<5; i++) {
+            //     Rprintf("i=%d,",i);
+            //     Rprintf("field=%s,",i, m_field_names[i].c_str());
+            // }
+            // Rprintf("\n");
+                
             
             if (begin_offset >= 0) {
                 m_begin = m_file.data() + begin_offset;

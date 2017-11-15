@@ -53,9 +53,14 @@ void rcsvf_reader_open(SEXP ptr,
     char sep_cpp = tmpstr[0];
 
     // eol
-    tmpstr = CHAR(STRING_ELT(eol,0));
-    std::vector<char> eol_cpp(tmpstr.size());
-    std::copy(tmpstr.begin(), tmpstr.end(), eol_cpp.begin());
+    std::vector<char> eol_cpp(0);
+    if (Rf_isNull(eol)) {
+        eol_cpp.clear();
+    } else {
+        tmpstr = CHAR(STRING_ELT(eol,0));
+        eol_cpp.resize(tmpstr.size());
+        std::copy(tmpstr.begin(), tmpstr.end(), eol_cpp.begin());
+    }
 
     // quote_rule
     tmpstr = CHAR(STRING_ELT(quote_rule,0));
@@ -499,6 +504,7 @@ namespace rcsvf {
                 m_pos = pos_original;
             }
         }
+        
         return *this;
     }
     
