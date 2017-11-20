@@ -73,12 +73,16 @@ namespace rcsvf {
             
             if (begin_offset >= 0) {
                 m_begin = m_file.data() + begin_offset;
-                m_pos = m_begin;
+                if (m_pos < m_begin) {
+                    m_pos = m_begin;
+                }
             }
 
             if (end_offset >= 0) {
                 m_end = m_file.data() + end_offset;
-                m_pos = m_begin;
+                if (m_pos < m_begin) {
+                    m_pos = m_begin;
+                }
             }
 
             return *this;
