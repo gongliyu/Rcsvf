@@ -1,0 +1,26 @@
+context("bitwise-argchk")
+
+test_that("bitwise.integer2double", {
+  expect_error(bitwise.integer2double(NULL))
+  expect_error(bitwise.integer2double(NA))
+  expect_error(bitwise.integer2double(NaN))
+  expect_error(bitwise.integer2double(1.2))
+  expect_error(bitwise.integer2double("hello"))
+  expect_error(bitwise.integer2double(list(1,2)))
+  expect_error(bitwise.integer2double(TRUE), NA)
+  expect_error(bitwise.integer2double(1), NA)
+  expect_error(bitwise.integer2double(c(1,2)), NA)
+  expect_error(bitwise.integer2double(1e100))
+})
+
+test_that("bitwise.double2integer", {
+  expect_error(bitwise.double2integer(NULL))
+  expect_error(bitwise.double2integer(NA))
+  expect_error(bitwise.double2integer(as.double(NA)))
+  expect_error(bitwise.double2integer(NaN), NA)
+  expect_error(bitwise.double2integer("hello"))
+  expect_error(bitwise.double2integer(list(0,0)))
+  expect_error(bitwise.double2integer(0), NA)
+  expect_error(bitwise.double2integer(c(0,0)), NA)
+  expect_error(bitwise.double2integer(1e100))
+})

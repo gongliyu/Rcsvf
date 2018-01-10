@@ -3,11 +3,104 @@
 #' @docType class
 #' @export
 #'
-#' @keywords data
-#'
 #' @useDynLib csvf
 #'
-
+#' @keywords data
+#'
+#' @section Methods:
+#'
+#' \subsection{\code{new}}{
+#'   Construct a new Reader object by open a csv file
+#'   \subsection{Usage}{\code{Reader$new(filename,...)}}
+#'   \subsection{Parameters}{
+#'     \describe{
+#'       \item{filename}{A string to specify the path to a csv file}
+#'       \item{...}{Other arguments which will be passed to \code{open}}
+#'     }
+#'   }
+#'   \subsection{Return}{A Reader object}
+#' }
+#'
+#' \subsection{\code{open}}{
+#'   Open a csv file and associate it with an existing Reader object
+#'   \subsection{Usage}{
+#'     \code{obj$open(filename, sep=",", eol=NULL, quote.rule="doubled", fill=TRUE, strip.white=TRUE, skip.blank.lines=TRUE, quote="\"", verbose=FALSE, begin.offset=NULL, end.offset=NULL, header="auto")}
+#'   }
+#'   \subsection{Parameters}{
+#'     \describe{
+#'
+#'       \item{obj}{The Reader object used to open the csv file. After \code{open}, the object will be associated with the openned csv file.}
+#' 
+#'       \item{filename}{A string to specify the path to a csv file}
+#' 
+#'       \item{sep}{Character used to separate fields in the csv file. The value of this argument could be ",", "|", ";", "\t", " ", "\0" or "auto.detect". If a user specify "\0" or "auto.detect", the separator character will be automatically detected based on the content of the csv file. The default value is ",".}
+#' 
+#'       \item{eol}{A string to specify the end of line. Possible value could be "\n", "\r\n", "", NULL, or "auto.detect". If a user specifies "", NULL, or "auto.detect", the end-of-line character(s) will be automatically detected from the content of the csv file. Default value is \code{NULL}.}
+#' 
+#'       \item{quote.rule}{A string to specify the quote rule of the csv file. Possible values could be the followings:
+#'         \describe{
+#'           \item{"doubled"}{means quotes inside fields are doubled. For example: <<...,"hello ""world""",...>>.}
+#'           \item{"escaped"}{means quotes inside fields are escaped with a backslash. For example: <<...,"hello \"world\"",...>>.}
+#'           \item{"verbatim"}{means quotes inside fields are not escaped but appears verbatim. For example: <<...,"hello "world"",...>>.}
+#'           \item{"none"}{means fields are not quoted at all. Any quote characters appearing anywhere inside fields will be treated as any other regular characters. For example: <<...,hello "world",...>>.}
+#'           \item{"auto.detect"}{means quote rule is not specified when openning the csv file, will detect quote rule automatically from the content of the csv file.}
+#'         }
+#'       }
+#'
+#'       \item{fill}{}
+#'
+#'       \item{strip.white}{}
+#'
+#'       \item{strip.blank.lines}{}
+#'
+#'       \item{quote}{quote character. Default value is "\""}
+#'
+#'       \item{verbose}{a bool flag specify whether to print debug information or not.}
+#'
+#'       \item{header}{a bool value to specify whether the csv file contains header, or a string "auto" to detect header automatically from the content of the csv file.}
+#'     }
+#'   }
+#'   \subsection{Return}{\code{NULL}}
+#' }
+#'
+#' \subsection{\code{properties}}{
+#'   Query the properties of a Reader object.
+#'   \subsection{Usage}{\code{obj$properties()}}
+#'   \subsection{Parameters}{
+#'     \describe{
+#'       \item{obj}{The Reader object whose properties will be queried.}
+#'     }
+#'   }
+#'   \subsection{Return}{
+#'     A named list contains the following fields:
+#'     \describe{
+#'       \item{sep}{}
+#'       \item{eol}{}
+#'       \item{quote.rule}{}
+#'       \item{fill}{}
+#'       \item{strip.white}{}
+#'       \item{skip.blank.lines}{}
+#'       \item{quote}{}
+#'       \item{verbose}{}
+#'       \item{nfields}{}
+#'       \item{field.types}{}
+#'       \item{field.names}{}
+#'     }
+#'   }
+#' }
+#'
+#' \subsection{\code{read}}{
+#'   Read a specific number of records (i.e. rows)
+#'   \subsection{Usage}{\code{obj$read(n=1)}}
+#'   \subsection{Parameters}{
+#'     \describe{
+#'       \item{obj}{Reader object}
+#'       \item{n}{A scalar number to specify at most this many records will be read.}
+#'     }
+#'   }
+#'   \subsection{Return}{A data.frame represent the records by the Reader object.}
+#' }
+#' 
 Reader <- R6::R6Class(
   "Reader",
   public = list(
@@ -20,7 +113,7 @@ Reader <- R6::R6Class(
     open = function(filename, sep=",", eol=NULL,
                     quote.rule="doubled", fill=TRUE,
                     strip.white=TRUE, skip.blank.lines=TRUE,
-                    quote="\"", verbose=TRUE,
+                    quote="\"", verbose=FALSE,
                     begin.offset=NULL, end.offset=NULL,
                     header="auto")
     {
@@ -54,15 +147,12 @@ Reader <- R6::R6Class(
       .Call("rcsvf_reader_read", private$handle, n)
     },
 
-    chunk = function(nchunks, npositions=-1, nrecords_per_position=10)
+    chunk_uniformly = function(nchunks, npositions=-1, nrecords_per_position=10)
     {
-      .Call("rcsvf_reader_chunk", private$handle, nchunks, npositions, nrecords_per_position)
+      .Call("rcsvf_reader_chunk_uniformly", private$handle, nchunks, npositions, nrecords_per_position)
     }
     ),
 
   private = list(
     handle = NULL)
 )
-
-
-    

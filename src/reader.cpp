@@ -322,8 +322,6 @@ SEXP rcsvf_reader_read(SEXP ptr, SEXP n)
         nread++;
     }
 
-
-
     for (int i=0; i<nfields; i++) {
         SETLENGTH(VECTOR_ELT(res,i), nread);
     }
@@ -339,7 +337,7 @@ SEXP rcsvf_reader_read(SEXP ptr, SEXP n)
  * estimate positions for equal chunks
  */
 extern "C"
-SEXP rcsvf_reader_chunk(SEXP ptr, SEXP nchunks, SEXP npositions, SEXP nrecords_per_position)
+SEXP rcsvf_reader_chunk_uniformly(SEXP ptr, SEXP nchunks, SEXP npositions, SEXP nrecords_per_position)
 {
     // ptr
     auto ptr_cpp = static_cast<rcsvf::reader*>(R_ExternalPtrAddr(ptr));
@@ -353,18 +351,25 @@ SEXP rcsvf_reader_chunk(SEXP ptr, SEXP nchunks, SEXP npositions, SEXP nrecords_p
     // nrecords_per_position
     int nrecords_per_position_cpp = Rf_asInteger(nrecords_per_position);
 
-    std::vector<ptrdiff_t> offsets_cpp = ptr_cpp->chunk(nchunks_cpp, npositions_cpp, nrecords_per_position_cpp);
+    double nrecords_cpp = 0;
+    std::vector<ptrdiff_t> offsets_cpp = ptr_cpp->chunk_uniformly(nrecords_cpp, nchunks_cpp, npositions_cpp, nrecords_per_position_cpp);
 
     SEXP offsets = Rf_protect(Rf_allocVector(REALSXP, offsets_cpp.size()));
     for (int i=0; i<offsets_cpp.size(); i++) {
+        // ptrdiff_t is a 64-bits integer on 64 bit platform. However,
+        // the integer value in R is 32 bit. So we need to store its
+        // bit-values in a double value.
         int64_t tmp = static_cast<int64_t>(offsets_cpp[i]);
-        //double tmp2 = reinterpret_cast<double&>(tmp);
-        //REAL(offsets)[i] = tmp2;
         REAL(offsets)[i] = reinterpret_cast<double&>(tmp);
     }
-  
-    Rf_unprotect(1);
-    return offsets;
+
+    const char *names[] = {"offsets", "estimated_total_nrecords",""};
+    SEXP res = Rf_protect(Rf_mkNamed(VECSXP, names));
+    SET_VECTOR_ELT(res, 0, offsets);
+    SET_VECTOR_ELT(res, 1, Rf_ScalarReal(nrecords_cpp));
+    
+    Rf_unprotect(2);
+    return res;
 }
 
 namespace {

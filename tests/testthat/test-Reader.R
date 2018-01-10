@@ -14,7 +14,7 @@ test_that("constructor", {
 })
 
 test_that("properties", {
-  reader <- Reader$new("data/simple.csv")
+  reader <- Reader$new("data/simple.csv", verbose=FALSE)
   expect_identical(
     reader$properties(),
     list(sep=",", eol="\n", quote.rule="doubled", fill=TRUE,
@@ -47,9 +47,9 @@ test_that("read", {
                stringsAsFactors = FALSE))
 })
 
-test_that("chunk", {
+test_that("chunk_uniformly", {
   reader <- Reader$new("data/simple.csv")
-  offsets <- reader$chunk(2, 6, 1)
+  offsets <- reader$chunk_uniformly(2, 6, 1)$offsets
   reader$open("data/simple.csv", begin.offset=offsets[1],
               end.offset=offsets[2])
   df1 <- reader$read(100)
